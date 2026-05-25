@@ -30,13 +30,19 @@ jobs:
           key: keystore-${{ github.repository }}
 
       - name: Generate keystore (first run only)
-        if: steps.cache-keystore.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          keytool -genkey -v -keystore android/app/debug.keystore -alias androiddebugkey \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android \
-            -dname "CN=Dev, OU=Dev, O=Dev, L=Dev, ST=Dev, C=CN"
+          if [ ! -f android/app/debug.keystore ]; then
+            keytool -genkey -v -keystore android/app/debug.keystore -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=Dev, OU=Dev, O=Dev, L=Dev, ST=Dev, C=CN"
+          fi
+
+      - name: Patch applicationId for fork
+        shell: bash
+        run: |
+          sed -i 's/applicationId "cn.toside.music.mobile"/applicationId "cn.toside.music.mobile.fork"/' android/app/build.gradle
 
       - name: Build Package
         env:
