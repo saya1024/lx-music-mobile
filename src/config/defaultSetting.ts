@@ -6,6 +6,7 @@ const defaultSetting: LX.AppSetting = {
   'common.sourceNameType': 'alias',
   'common.shareType': 'system',
   'common.isAgreePact': false,
+  'common.localMusicPath': '',
   'common.autoHidePlayBar': true,
   'common.drawerLayoutPosition': 'left',
   'common.homePageScroll': true,

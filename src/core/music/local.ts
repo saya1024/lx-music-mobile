@@ -15,6 +15,7 @@ import {
 import { getLocalFilePath } from '@/utils/music'
 import { readLyric, readPic } from '@/utils/localMediaMetadata'
 import { stat } from '@/utils/fs'
+import { findMatchInIndex } from './aiLocalMusicScanner'
 
 const getOtherSourceByLocal = async<T>(musicInfo: LX.Music.MusicInfoLocal, handler: (infos: LX.Music.MusicInfoOnline[]) => Promise<T>) => {
   let result: LX.Music.MusicInfoOnline[] = []
@@ -73,8 +74,9 @@ export const getMusicUrl = async({ musicInfo, isRefresh, allowToggleSource = tru
   allowToggleSource?: boolean
 }): Promise<string> => {
   if (!isRefresh) {
+    const matchedPath = findMatchInIndex(musicInfo.name, musicInfo.singer)
+    if (matchedPath) return matchedPath
     const path = await getLocalFilePath(musicInfo)
-    // console.log(path)
     if (path) return path
   }
 

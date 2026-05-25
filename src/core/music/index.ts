@@ -17,6 +17,8 @@ import {
   getPicUrl as getLocalPicUrl,
   getLyricInfo as getLocalLyricInfo,
 } from './local'
+import { findMatchInIndex } from './aiLocalMusicScanner'
+import settingState from '@/store/setting/state'
 
 
 export const getMusicUrl = async({
@@ -32,6 +34,10 @@ export const getMusicUrl = async({
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
   allowToggleSource?: boolean
 }): Promise<string> => {
+  if (!('progress' in musicInfo) && musicInfo.source != 'local' && !isRefresh && settingState.setting['common.localMusicPath']) {
+    const localPath = findMatchInIndex(musicInfo.name, musicInfo.singer)
+    if (localPath) return localPath
+  }
   if ('progress' in musicInfo) {
     return getDownloadMusicUrl({ musicInfo, isRefresh, onToggleSource, allowToggleSource })
   } else if (musicInfo.source == 'local') {

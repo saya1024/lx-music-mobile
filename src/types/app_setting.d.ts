@@ -37,6 +37,11 @@ declare global {
       'common.isAgreePact': boolean
 
       /**
+       * 本地音乐文件扫描路径
+       */
+      'common.localMusicPath': string
+
+      /**
        * 是否在键盘弹出时隐藏播放栏
        */
       'common.autoHidePlayBar': boolean
