@@ -1,5 +1,5 @@
 import { readDir, extname } from '@/utils/fs'
-import { musicNameToFileName, getAllPossibleNames, getAudioExts } from '@/utils/aiFileName'
+import { musicNameToFileName, getAllPossibleNames, getAudioExts, replaceInvalidFileNameChars } from '@/utils/aiFileName'
 import { readMetadata } from '@/utils/localMediaMetadata'
 
 export interface LocalFileIndex {
@@ -58,30 +58,36 @@ const scanDir = async(
       onFileFound()
       const fullPath = entry.path || joinPath(dirPath, entry.name)
       try {
-        const key = await indexFile(fullPath, format)
-        if (key && !fileMap.has(key)) {
-          fileMap.set(key, fullPath)
-        }
+        await indexFile(fullPath, fileMap, format)
       } catch { /* skip unreadable files */ }
     }
   }
 }
 
+const addKey = (fileMap: Map<string, string>, key: string, filePath: string) => {
+  if (key && !fileMap.has(key)) fileMap.set(key, filePath)
+}
+
 const indexFile = async(
   filePath: string,
+  fileMap: Map<string, string>,
   format: string,
-): Promise<string | null> => {
+): Promise<void> => {
+  const parts = filePath.split('/')
+  const fileName = parts[parts.length - 1] ?? filePath
+  const baseName = fileName.includes('.') ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName
+  const trimmedFileName = baseName.trim()
+
   try {
     const metadata = await readMetadata(filePath)
     const name = metadata?.name?.trim()
     if (name) {
-      return musicNameToFileName(name, metadata.singer ?? '', format)
+      addKey(fileMap, musicNameToFileName(name, metadata?.singer ?? '', format), filePath)
+      addKey(fileMap, replaceInvalidFileNameChars(name), filePath)
     }
   } catch { /* skip metadata read errors */ }
-  const parts = filePath.split('/')
-  const fileName = parts[parts.length - 1] ?? filePath
-  const baseName = fileName.includes('.') ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName
-  return baseName.trim() || null
+
+  if (trimmedFileName) addKey(fileMap, trimmedFileName, filePath)
 }
 
 export const scanLocalMusicDir = async(dirPath: string, format: string): Promise<LocalFileIndex> => {
