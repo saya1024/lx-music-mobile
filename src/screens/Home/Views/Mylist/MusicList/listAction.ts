@@ -6,6 +6,7 @@ import { similar, sortInsert, toOldMusicInfo } from '@/utils'
 import { confirmDialog, openUrl, shareMusic, toast } from '@/utils/tools'
 import { addDislikeInfo, hasDislike } from '@/core/dislikeList'
 import playerState from '@/store/player/state'
+import { LIST_IDS } from '@/config/constant'
 
 import type { SelectInfo } from './ListMenu'
 import { type Metadata } from '@/components/MetadataEditModal'
@@ -36,6 +37,24 @@ export const handleRemove = (listId: SelectInfo['listId'], musicInfo: SelectInfo
     })
   } else {
     void removeListMusics(listId, [musicInfo.id])
+  }
+}
+
+export const handleToggleLove = (musicInfo: SelectInfo['musicInfo']) => {
+  const loveSongs = getListMusicSync(LIST_IDS.LOVE)
+  if (loveSongs.some(s => s.id === musicInfo.id)) {
+    const idx = loveSongs.findIndex(s => s.id === musicInfo.id)
+    if (idx > -1) loveSongs.splice(idx, 1)
+    global.app_event.myListMusicUpdate([LIST_IDS.LOVE])
+    void removeListMusics(LIST_IDS.LOVE, [musicInfo.id])
+  } else {
+    if (settingState.setting['list.addMusicLocationType'] === 'top') {
+      loveSongs.unshift(musicInfo)
+    } else {
+      loveSongs.push(musicInfo)
+    }
+    global.app_event.myListMusicUpdate([LIST_IDS.LOVE])
+    void addListMusics(LIST_IDS.LOVE, [musicInfo], settingState.setting['list.addMusicLocationType'])
   }
 }
 

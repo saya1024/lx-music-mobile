@@ -3,6 +3,8 @@ import { useI18n } from '@/lang'
 import Menu, { type Menus, type MenuType, type Position } from '@/components/common/Menu'
 import { hasDislike } from '@/core/dislikeList'
 import { existsFile } from '@/utils/fs'
+import { getListMusicSync } from '@/utils/listManage'
+import { LIST_IDS } from '@/config/constant'
 
 export interface SelectInfo {
   musicInfo: LX.Music.MusicInfo
@@ -16,6 +18,7 @@ const initSelectInfo = {}
 export interface ListMenuProps {
   onPlay: (selectInfo: SelectInfo) => void
   onPlayLater: (selectInfo: SelectInfo) => void
+  onToggleLove: (selectInfo: SelectInfo) => void
   onAdd: (selectInfo: SelectInfo) => void
   onMove: (selectInfo: SelectInfo) => void
   onEditMetadata: (selectInfo: SelectInfo) => void
@@ -61,8 +64,11 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
 
   const handleSetMenu = (musicInfo: LX.Music.MusicInfo) => {
     let edit_metadata = false
+    const loveSongs = getListMusicSync(LIST_IDS.LOVE)
+    const isLoved = loveSongs.some(s => s.id === musicInfo.id)
     const menu = [
       { action: 'play', label: t('play') },
+      { action: 'toggleLove', label: isLoved ? '取消收藏' : '收藏' },
       { action: 'playLater', label: t('play_later') },
       // { action: 'download', label: '下载' },
       { action: 'add', label: t('add_to') },
@@ -97,6 +103,9 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
     switch (action) {
       case 'play':
         props.onPlay(selectInfo)
+        break
+      case 'toggleLove':
+        props.onToggleLove(selectInfo)
         break
       case 'playLater':
         props.onPlayLater(selectInfo)
