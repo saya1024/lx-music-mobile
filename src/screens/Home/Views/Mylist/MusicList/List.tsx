@@ -14,6 +14,7 @@ import type { Position } from './ListMenu'
 import type { SelectMode } from './MultipleModeBar'
 import { useActiveListId } from '@/store/list/hook'
 import { useSettingValue } from '@/store/setting/hook'
+import { onScanComplete } from '@/core/music/aiLocalMusicScanner'
 
 type FlatListType = FlatListProps<LX.Music.MusicInfo>
 
@@ -57,6 +58,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
   const currentListIdRef = useRef('')
   const waitJumpListPositionRef = useRef(false)
   const rowInfo = useRef(getRowInfo())
+  const [scanTick, setScanTick] = useState(0)
   const isShowAlbumName = useSettingValue('list.isShowAlbumName')
   const isShowInterval = useSettingValue('list.isShowInterval')
   // console.log('render music list')
@@ -169,11 +171,13 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
     global.state_event.on('mylistToggled', updateList)
     global.app_event.on('myListMusicUpdate', handleChange)
     global.app_event.on('jumpListPosition', handleJumpPosition)
+    const unsub = onScanComplete(() => { setScanTick(t => t + 1) })
 
     return () => {
       global.state_event.off('mylistToggled', updateList)
       global.app_event.off('myListMusicUpdate', handleChange)
       global.app_event.off('jumpListPosition', handleJumpPosition)
+      unsub()
     }
   }, [])
 
@@ -261,6 +265,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       rowInfo={rowInfo.current}
       isShowAlbumName={isShowAlbumName}
       isShowInterval={isShowInterval}
+      scanTick={scanTick}
     />
   )
   const getkey: FlatListType['keyExtractor'] = item => item.id

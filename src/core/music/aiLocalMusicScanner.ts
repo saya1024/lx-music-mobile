@@ -11,6 +11,21 @@ export interface LocalFileIndex {
 
 let fileIndex: LocalFileIndex | null = null
 
+type ScanListener = () => void
+let scanListeners: ScanListener[] = []
+
+export const onScanComplete = (fn: ScanListener): (() => void) => {
+  scanListeners.push(fn)
+  return () => {
+    scanListeners = scanListeners.filter(l => l !== fn)
+  }
+}
+
+const notifyScanComplete = () => {
+  const list = scanListeners.slice()
+  list.forEach(fn => { fn() })
+}
+
 export const getFileIndex = (): Readonly<LocalFileIndex | null> => fileIndex
 
 const joinPath = (parent: string, child: string): string => {
@@ -84,6 +99,7 @@ export const scanLocalMusicDir = async(dirPath: string, format: string): Promise
   } catch {}
 
   fileIndex = { fileMap, scannedAt: Date.now(), scannedPath: dirPath, totalFiles }
+  notifyScanComplete()
   return fileIndex
 }
 

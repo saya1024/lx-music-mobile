@@ -14,7 +14,7 @@ import { findMatchInIndex } from '@/core/music/aiLocalMusicScanner'
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
 
 
-export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPress, selectedList, rowInfo, isShowAlbumName, isShowInterval }: {
+export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPress, selectedList, rowInfo, isShowAlbumName, isShowInterval, scanTick }: {
   item: LX.Music.MusicInfo
   index: number
   activeIndex: number
@@ -25,6 +25,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
   rowInfo: RowInfo
   isShowAlbumName: boolean
   isShowInterval: boolean
+  scanTick: number
 }) => {
   const theme = useTheme()
 
@@ -57,10 +58,11 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
           <Text color={active ? theme['c-primary-font'] : theme['c-font']} numberOfLines={1}>{item.name}</Text>
           {/* </View> */}
           <View style={styles.listItemSingle}>
+            <Badge>{findMatchInIndex(item.name, item.singer) ? '✔️' : item.source.toUpperCase()}</Badge>
+            {' '}
             <Text style={styles.listItemSingleText} size={11} color={active ? theme['c-primary-alpha-200'] : theme['c-500']} numberOfLines={1}>
               {singer}
             </Text>
-            <Badge>{findMatchInIndex(item.name, item.singer) ? '✔️' : item.source.toUpperCase()}</Badge>
           </View>
         </View>
         {
@@ -81,6 +83,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
     prevProps.index === nextProps.index &&
     prevProps.isShowAlbumName === nextProps.isShowAlbumName &&
     prevProps.isShowInterval === nextProps.isShowInterval &&
+    prevProps.scanTick === nextProps.scanTick &&
     prevProps.activeIndex != nextProps.index &&
     nextProps.activeIndex != nextProps.index &&
     nextProps.selectedList.includes(nextProps.item) == prevProps.selectedList.includes(nextProps.item)
