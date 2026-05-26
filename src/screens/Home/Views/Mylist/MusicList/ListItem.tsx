@@ -65,7 +65,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
           <Text color={active ? theme['c-primary-font'] : theme['c-font']} numberOfLines={1}>{item.name}</Text>
           {/* </View> */}
           <View style={styles.listItemSingle}>
-            <Badge>{findMatchInIndex(item.name, item.singer) ? '✔️' : item.source.toUpperCase()}</Badge>
+            <Badge>{findMatchInIndex(item.name, item.singer) ? '⭐' : item.source.toUpperCase()}</Badge>
             {isInLoveList && <Badge>❤️</Badge>}
             {' '}
             <Text style={styles.listItemSingleText} size={11} color={active ? theme['c-primary-alpha-200'] : theme['c-500']} numberOfLines={1}>
