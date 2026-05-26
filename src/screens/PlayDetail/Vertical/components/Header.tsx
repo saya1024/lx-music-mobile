@@ -36,15 +36,13 @@ const Title = () => {
     const id = musicInfo.id
     if (!id) return []
     const names: string[] = []
-    for (const [listId, songs] of allMusicList) {
-      if (listId === LIST_IDS.TEMP) continue
-      if (songs.some(s => s.id === id)) {
-        let name: string | undefined
-        if (listId === LIST_IDS.LOVE) name = global.i18n.t('list_name_love')
-        else if (listId === LIST_IDS.DEFAULT) name = global.i18n.t('list_name_default')
-        else name = listState.allList.find(l => l.id === listId)?.name
-        if (name) names.push(name)
-      }
+    const hasSong = (listId: string) => allMusicList.get(listId)?.some(s => s.id === id)
+    const checkAndPush = (listId: string, name: string) => { if (hasSong(listId) && name) names.push(name) }
+    checkAndPush(LIST_IDS.DEFAULT, global.i18n.t('list_name_default'))
+    checkAndPush(LIST_IDS.LOVE, global.i18n.t('list_name_love'))
+    for (const list of listState.allList) {
+      if (list.id === LIST_IDS.DEFAULT || list.id === LIST_IDS.LOVE || list.id === LIST_IDS.TEMP) continue
+      checkAndPush(list.id, list.name)
     }
     return names
   }, [musicInfo.id])
