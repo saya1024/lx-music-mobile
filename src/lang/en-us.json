@@ -88,6 +88,7 @@
   "list_name_default": "Default",
   "list_name_love": "Loved",
   "list_name_temp": "Temp List",
+  "player__in_lists": "In lists: ",
   "list_remove": "Remove",
   "list_remove_music_multi_tip": "Do you really want to remove the selected {num} songs?",
   "list_remove_tip": "Do you really want to remove \"{name}\"?",

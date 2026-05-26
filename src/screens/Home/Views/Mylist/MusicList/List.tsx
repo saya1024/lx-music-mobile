@@ -59,6 +59,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
   const waitJumpListPositionRef = useRef(false)
   const rowInfo = useRef(getRowInfo())
   const [scanTick, setScanTick] = useState(0)
+  const [listVersion, setListVersion] = useState(0)
   const isShowAlbumName = useSettingValue('list.isShowAlbumName')
   const isShowInterval = useSettingValue('list.isShowInterval')
   // console.log('render music list')
@@ -133,14 +134,18 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       })
     }
     const handleChange = (ids: string[]) => {
-      if (!ids.includes(listState.activeListId)) return
-      const id = listState.activeListId
-      void getListMusics(id).then((list) => {
-        if (currentListIdRef.current != id) return
-        selectedListRef.current = []
-        setSelectedList([])
-        setList([...list])
-      })
+      if (ids.includes(listState.activeListId)) {
+        const id = listState.activeListId
+        void getListMusics(id).then((list) => {
+          if (currentListIdRef.current != id) return
+          selectedListRef.current = []
+          setSelectedList([])
+          setList([...list])
+          setListVersion(v => v + 1)
+        })
+      } else {
+        setListVersion(v => v + 1)
+      }
     }
 
     const handleJumpPosition = () => {
@@ -266,6 +271,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       isShowAlbumName={isShowAlbumName}
       isShowInterval={isShowInterval}
       scanTick={scanTick}
+      listVersion={listVersion}
     />
   )
   const getkey: FlatListType['keyExtractor'] = item => item.id
@@ -288,7 +294,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       initialNumToRender={12}
       renderItem={renderItem}
       keyExtractor={getkey}
-      extraData={activeIndex}
+      extraData={{ activeIndex, listVersion }}
       getItemLayout={getItemLayout}
     />
   )

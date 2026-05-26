@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react'
+import { memo, useRef, useMemo, useState, useEffect } from 'react'
 
 import { View, StyleSheet } from 'react-native'
 
@@ -14,6 +14,9 @@ import SettingPopup, { type SettingPopupType } from '../../components/SettingPop
 import { useStatusbarHeight } from '@/store/common/hook'
 import Btn from './Btn'
 import TimeoutExitBtn from './TimeoutExitBtn'
+import { allMusicList } from '@/utils/listManage'
+import { LIST_IDS } from '@/config/constant'
+import listState from '@/store/list/state'
 
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 
@@ -21,12 +24,40 @@ export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 const Title = () => {
   const theme = useTheme()
   const musicInfo = usePlayerMusicInfo()
+  const [, forceUpdate] = useState(0)
 
+  useEffect(() => {
+    const handler = () => forceUpdate(n => n + 1)
+    global.app_event.on('myListMusicUpdate', handler)
+    return () => global.app_event.off('myListMusicUpdate', handler)
+  }, [])
+
+  const containingListNames = useMemo(() => {
+    const id = musicInfo.id
+    if (!id) return []
+    const names: string[] = []
+    for (const [listId, songs] of allMusicList) {
+      if (listId === LIST_IDS.TEMP) continue
+      if (songs.some(s => s.id === id)) {
+        let name: string | undefined
+        if (listId === LIST_IDS.LOVE) name = global.i18n.t('list_name_love')
+        else if (listId === LIST_IDS.DEFAULT) name = global.i18n.t('list_name_default')
+        else name = listState.allList.find(l => l.id === listId)?.name
+        if (name) names.push(name)
+      }
+    }
+    return names
+  }, [musicInfo.id])
 
   return (
     <View style={styles.titleContent}>
       <Text numberOfLines={1} style={styles.title}>{musicInfo.name}</Text>
       <Text numberOfLines={1} style={styles.title} size={12} color={theme['c-font-label']}>{musicInfo.singer}</Text>
+      {containingListNames.length > 0 && (
+        <Text numberOfLines={1} size={10} color={theme['c-400']} style={{ marginTop: 2 }}>
+          {global.i18n.t('player__in_lists')}{containingListNames.join('、')}
+        </Text>
+      )}
     </View>
   )
 }

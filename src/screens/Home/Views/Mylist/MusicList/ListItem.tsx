@@ -10,11 +10,14 @@ import { scaleSizeH } from '@/utils/pixelRatio'
 import Text from '@/components/common/Text'
 import Badge from '@/components/common/Badge'
 import { findMatchInIndex } from '@/core/music/aiLocalMusicScanner'
+import { getListMusicSync } from '@/utils/listManage'
+import { LIST_IDS } from '@/config/constant'
+import listState from '@/store/list/state'
 
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
 
 
-export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPress, selectedList, rowInfo, isShowAlbumName, isShowInterval, scanTick }: {
+export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPress, selectedList, rowInfo, isShowAlbumName, isShowInterval, scanTick, listVersion }: {
   item: LX.Music.MusicInfo
   index: number
   activeIndex: number
@@ -26,6 +29,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
   isShowAlbumName: boolean
   isShowInterval: boolean
   scanTick: number
+  listVersion: number
 }) => {
   const theme = useTheme()
 
@@ -45,6 +49,9 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
 
   const singer = `${item.singer}${isShowAlbumName && item.meta.albumName ? ` · ${item.meta.albumName}` : ''}`
 
+  const loveSongs = getListMusicSync(LIST_IDS.LOVE)
+  const isInLoveList = listState.activeListId !== LIST_IDS.LOVE && loveSongs.some(s => s.id === item.id)
+
   return (
     <View style={{ ...styles.listItem, width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)', opacity: isSupported ? 1 : 0.5 }}>
       <TouchableOpacity style={styles.listItemLeft} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
@@ -59,6 +66,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
           {/* </View> */}
           <View style={styles.listItemSingle}>
             <Badge>{findMatchInIndex(item.name, item.singer) ? '✔️' : item.source.toUpperCase()}</Badge>
+            {isInLoveList && <Badge>❤️</Badge>}
             {' '}
             <Text style={styles.listItemSingleText} size={11} color={active ? theme['c-primary-alpha-200'] : theme['c-500']} numberOfLines={1}>
               {singer}
@@ -84,6 +92,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
     prevProps.isShowAlbumName === nextProps.isShowAlbumName &&
     prevProps.isShowInterval === nextProps.isShowInterval &&
     prevProps.scanTick === nextProps.scanTick &&
+    prevProps.listVersion === nextProps.listVersion &&
     prevProps.activeIndex != nextProps.index &&
     nextProps.activeIndex != nextProps.index &&
     nextProps.selectedList.includes(nextProps.item) == prevProps.selectedList.includes(nextProps.item)

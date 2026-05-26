@@ -88,6 +88,7 @@
   "list_name_default": "試聽清單",
   "list_name_love": "我的最愛",
   "list_name_temp": "臨時清單",
+  "player__in_lists": "所屬清單：",
   "list_remove": "移除",
   "list_remove_music_multi_tip": "你真的想要移除所選的 {num} 首歌曲嗎？",
   "list_remove_tip": "你真的想要移除「{name}」嗎？",
