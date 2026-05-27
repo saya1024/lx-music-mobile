@@ -1,0 +1,78 @@
+name: Dev Release
+
+# 仅保留手动触发
+on:
+  workflow_dispatch:
+
+jobs:
+  Android:
+    name: Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out git repository
+        uses: actions/checkout@v4
+
+      - name: Setup Env
+        uses: ./.github/actions/setup
+
+      - name: Get package version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+
+      - name: Restore keystore from cache
+        id: cache-keystore
+        uses: actions/cache@v4
+        with:
+          path: android/app/debug.keystore
+          key: keystore-${{ github.repository }}
+
+      - name: Generate keystore (first run only)
+        shell: bash
+        run: |
+          if [ ! -f android/app/debug.keystore ]; then
+            keytool -genkey -v -keystore android/app/debug.keystore -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=Dev, OU=Dev, O=Dev, L=Dev, ST=Dev, C=CN"
+          fi
+
+      - name: Patch applicationId for fork
+        shell: bash
+        run: |
+          sed -i 's/applicationId "cn.toside.music.mobile"/applicationId "cn.toside.music.mobile.fork"/' android/app/build.gradle
+
+      - name: Build Package
+        env:
+          DISABLE_SVG: 1
+        shell: bash
+        run: |
+          cd android
+          ./gradlew assembleRelease -PMYAPP_UPLOAD_STORE_FILE=debug.keystore \
+            -PMYAPP_UPLOAD_KEY_ALIAS=androiddebugkey \
+            -PMYAPP_UPLOAD_STORE_PASSWORD=android \
+            -PMYAPP_UPLOAD_KEY_PASSWORD=android
+
+      - name: Generate file MD5
+        run: |
+          cd android/app/build/outputs/apk/release
+          md5sum *.apk
+
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lx-music-mobile-v${{ env.PACKAGE_VERSION }}-arm64-v8a-release
+          path: android/app/build/outputs/apk/release/lx-music-mobile-v${{ env.PACKAGE_VERSION }}-arm64-v8a.apk
+
+      - name: Upload universal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lx-music-mobile-v${{ env.PACKAGE_VERSION }}-universal-release
+          path: android/app/build/outputs/apk/release/lx-music-mobile-v${{ env.PACKAGE_VERSION }}-universal.apk
+
+      # 增加这一步：把缓存里的 keystore 变成可下载的产物
+      - name: Upload Keystore to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-fished-keystore
+          path: android/app/debug.keystore
