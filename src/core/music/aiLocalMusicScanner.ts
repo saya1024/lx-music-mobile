@@ -2,6 +2,11 @@ import { readDir, extname } from '@/utils/fs'
 import { getAllPossibleNames, getAudioExts } from '@/utils/aiFileName'
 import { log } from '@/utils/log'
 
+interface AudioFileEntry {
+  name: string
+  path: string
+}
+
 export interface LocalFileIndex {
   fileMap: Map<string, string>
   scannedAt: number
@@ -36,7 +41,7 @@ const joinPath = (parent: string, child: string): string => {
 const collectAudioFiles = async(
   dirPath: string,
   audioExts: string[],
-): Promise<string[]> => {
+): Promise<AudioFileEntry[]> => {
   let entries
   try {
     entries = await readDir(dirPath)
@@ -44,8 +49,8 @@ const collectAudioFiles = async(
     return []
   }
 
-  const files: string[] = []
-  const subDirPromises: Array<Promise<string[]>> = []
+  const files: AudioFileEntry[] = []
+  const subDirPromises: Array<Promise<AudioFileEntry[]>> = []
 
   for (const entry of entries) {
     if (!entry) continue
@@ -53,9 +58,8 @@ const collectAudioFiles = async(
       const fullPath = entry.path || joinPath(dirPath, entry.name)
       subDirPromises.push(collectAudioFiles(fullPath, audioExts))
     } else if (entry.isFile) {
-      const ext = '.' + extname(entry.name).toLowerCase()
-      if (!audioExts.includes(ext)) continue
-      files.push(entry.path || joinPath(dirPath, entry.name))
+      if (!audioExts.includes('.' + extname(entry.name).toLowerCase())) continue
+      files.push({ name: entry.name, path: entry.path || joinPath(dirPath, entry.name) })
     }
   }
 
@@ -75,7 +79,7 @@ export const scanLocalMusicDir = async(dirPath: string, _format: string): Promis
   log.info(`[scan] start scanning: ${dirPath}`)
   const scanStart = Date.now()
 
-  let allFiles: string[] = []
+  let allFiles: AudioFileEntry[] = []
   try {
     allFiles = await collectAudioFiles(dirPath, audioExts)
   } catch {}
@@ -83,11 +87,11 @@ export const scanLocalMusicDir = async(dirPath: string, _format: string): Promis
   const totalFiles = allFiles.length
   log.info(`[scan] found ${totalFiles} audio files`)
 
-  for (const filePath of allFiles) {
-    log.info(`[scan] indexing: ${filePath}`)
-    const fileName = filePath.split('/').pop() ?? filePath
-    const baseName = fileName.includes('.') ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName
-    if (baseName) fileMap.set(baseName, filePath)
+  for (const file of allFiles) {
+    log.info(`[scan] indexing: ${file.path}`)
+    const ext = extname(file.name)
+    const baseName = ext ? file.name.slice(0, -(ext.length + 1)) : file.name
+    if (baseName) fileMap.set(baseName, file.path)
   }
 
   const elapsed = Date.now() - scanStart
