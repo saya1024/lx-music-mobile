@@ -1,9 +1,7 @@
 name: Dev Release
 
+# 仅保留手动触发
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
 
 jobs:
