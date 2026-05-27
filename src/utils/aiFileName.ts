@@ -23,7 +23,7 @@ export const replaceInvalidFileNameChars = (name: string): string => {
 }
 
 export const musicNameToFileName = (name: string, singer: string, format: string): string => {
-  return replaceInvalidFileNameChars(formatMusicName(format, name, singer))
+  return replaceInvalidFileNameChars(formatMusicName(format, name, singer)).normalize('NFC')
 }
 
 const FORMATS = [
