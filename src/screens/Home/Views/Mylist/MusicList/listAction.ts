@@ -11,7 +11,7 @@ import { LIST_IDS } from '@/config/constant'
 import type { SelectInfo } from './ListMenu'
 import { type Metadata } from '@/components/MetadataEditModal'
 import musicSdk from '@/utils/musicSdk'
-import { getListMusicSync } from '@/utils/listManage'
+import { getListMusicSync, userLists } from '@/utils/listManage'
 
 export const handlePlay = (listId: SelectInfo['listId'], index: SelectInfo['index']) => {
   void playList(listId, index)
@@ -179,5 +179,26 @@ export const handleToggleSource = async(listId: string, musicInfo: LX.Music.Musi
       void playListById(listId, toggleMusicInfo.id)
     }
   })
+
+  const allListIds = [LIST_IDS.DEFAULT, LIST_IDS.LOVE, ...userLists.map(l => l.id)].filter(lid => lid && lid !== listId)
+  for (const otherListId of allListIds) {
+    const otherList = getListMusicSync(otherListId)
+    const otherIdx = otherList.findIndex(m => m.id == oldId)
+    if (otherIdx < 0) continue
+    const existingIdx = otherList.findIndex(m => m.id == id)
+    const otherRemoveIds = [oldId]
+    if (existingIdx > -1) otherRemoveIds.push(id)
+    let targetOtherIdx = otherIdx
+    if (existingIdx > -1 && existingIdx < targetOtherIdx) targetOtherIdx--
+    void removeListMusics(otherListId, otherRemoveIds).then(async() => {
+      await addListMusics(otherListId, [toggleMusicInfo], 'bottom')
+      await updateListMusicPosition(otherListId, targetOtherIdx, [id])
+    })
+  }
+
+  const playListId = playerState.playMusicInfo.listId
+  if (playListId && playListId !== listId && playerState.playMusicInfo.musicInfo?.id == oldId) {
+    void playListById(playListId, toggleMusicInfo.id)
+  }
   return true
 }
