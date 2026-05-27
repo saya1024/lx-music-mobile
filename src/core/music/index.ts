@@ -34,7 +34,7 @@ export const getMusicUrl = async({
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
   allowToggleSource?: boolean
 }): Promise<string> => {
-  if (!('progress' in musicInfo) && musicInfo.source != 'local' && !isRefresh && settingState.setting['common.localMusicPath']) {
+  if (!('progress' in musicInfo) && !isRefresh && settingState.setting['common.localMusicPath']) {
     const localPath = findMatchInIndex(musicInfo.name, musicInfo.singer)
     if (localPath) return localPath
   }
