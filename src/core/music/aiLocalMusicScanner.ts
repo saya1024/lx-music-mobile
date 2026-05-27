@@ -1,6 +1,16 @@
 import { readDir, extname } from '@/utils/fs'
 import { musicNameToFileName, getAllPossibleNames, getAudioExts, replaceInvalidFileNameChars } from '@/utils/aiFileName'
 import { readMetadata } from '@/utils/localMediaMetadata'
+import { log } from '@/utils/log'
+
+const SCAN_CONCURRENCY = 20
+
+const DASH_RXP = /[–—～~]/g
+const SPACE_RXP = /\s+/g
+
+const normalizeKey = (key: string): string => {
+  return key.replace(DASH_RXP, '-').replace(SPACE_RXP, ' ').trim()
+}
 
 export interface LocalFileIndex {
   fileMap: Map<string, string>
@@ -33,39 +43,42 @@ const joinPath = (parent: string, child: string): string => {
   return parent + '/' + child
 }
 
-const scanDir = async(
+const collectAudioFiles = async(
   dirPath: string,
-  fileMap: Map<string, string>,
   audioExts: string[],
-  format: string,
-  onFileFound: () => void,
-): Promise<void> => {
+): Promise<string[]> => {
   let entries
   try {
     entries = await readDir(dirPath)
   } catch {
-    return
+    return []
   }
+
+  const files: string[] = []
+  const subDirPromises: Array<Promise<string[]>> = []
 
   for (const entry of entries) {
     if (!entry) continue
     if (entry.isDirectory) {
       const fullPath = entry.path || joinPath(dirPath, entry.name)
-      await scanDir(fullPath, fileMap, audioExts, format, onFileFound)
+      subDirPromises.push(collectAudioFiles(fullPath, audioExts))
     } else if (entry.isFile) {
       const ext = '.' + extname(entry.name).toLowerCase()
       if (!audioExts.includes(ext)) continue
-      onFileFound()
-      const fullPath = entry.path || joinPath(dirPath, entry.name)
-      try {
-        await indexFile(fullPath, fileMap, format)
-      } catch { /* skip unreadable files */ }
+      files.push(entry.path || joinPath(dirPath, entry.name))
     }
   }
+
+  const nested = await Promise.all(subDirPromises)
+  return [...files, ...nested.flat()]
 }
 
 const addKey = (fileMap: Map<string, string>, key: string, filePath: string) => {
-  if (key && !fileMap.has(key)) fileMap.set(key, filePath)
+  if (!key) return
+  const normalized = normalizeKey(key)
+  if (!fileMap.has(normalized)) fileMap.set(normalized, filePath)
+  const lowered = normalized.toLowerCase()
+  if (lowered !== normalized && !fileMap.has(lowered)) fileMap.set(lowered, filePath)
 }
 
 const indexFile = async(
@@ -78,11 +91,14 @@ const indexFile = async(
   const baseName = fileName.includes('.') ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName
   const trimmedFileName = baseName.trim()
 
+  log.info(`[scan] indexing: ${filePath}`)
+
   try {
     const metadata = await readMetadata(filePath)
     const name = metadata?.name?.trim()
+    const singer = metadata?.singer?.trim()
     if (name) {
-      addKey(fileMap, musicNameToFileName(name, metadata?.singer ?? '', format), filePath)
+      addKey(fileMap, musicNameToFileName(name, singer ?? '', format), filePath)
       addKey(fileMap, replaceInvalidFileNameChars(name), filePath)
     }
   } catch { /* skip metadata read errors */ }
@@ -99,10 +115,24 @@ export const scanLocalMusicDir = async(dirPath: string, format: string): Promise
     return fileIndex
   }
 
-  let totalFiles = 0
+  log.info(`[scan] start scanning: ${dirPath}, format: ${format}`)
+  const scanStart = Date.now()
+
+  let allFiles: string[] = []
   try {
-    await scanDir(dirPath, fileMap, audioExts, format, () => { totalFiles++ })
+    allFiles = await collectAudioFiles(dirPath, audioExts)
   } catch {}
+
+  const totalFiles = allFiles.length
+  log.info(`[scan] found ${totalFiles} audio files, start indexing...`)
+
+  for (let i = 0; i < allFiles.length; i += SCAN_CONCURRENCY) {
+    const batch = allFiles.slice(i, i + SCAN_CONCURRENCY)
+    await Promise.all(batch.map(async f => { try { await indexFile(f, fileMap, format) } catch {} }))
+  }
+
+  const elapsed = Date.now() - scanStart
+  log.info(`[scan] scan complete: ${totalFiles} files indexed in ${elapsed}ms`)
 
   fileIndex = { fileMap, scannedAt: Date.now(), scannedPath: dirPath, totalFiles }
   notifyScanComplete()
@@ -115,10 +145,15 @@ export const findMatchInIndex = (
 ): string | null => {
   if (!fileIndex) return null
   const possibleKeys = getAllPossibleNames(name, singer)
+  const map = fileIndex.fileMap
+
   for (const key of possibleKeys) {
-    const path = fileIndex.fileMap.get(key)
-    if (path) return path
+    const normalized = normalizeKey(key)
+    const lowered = normalized.toLowerCase()
+    if (map.has(normalized)) return map.get(normalized)!
+    if (lowered !== normalized && map.has(lowered)) return map.get(lowered)!
   }
+
   return null
 }
 
