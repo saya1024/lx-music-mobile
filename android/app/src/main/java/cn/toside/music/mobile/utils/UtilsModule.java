@@ -11,6 +11,8 @@ import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.os.Environment;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
@@ -332,6 +334,25 @@ public class UtilsModule extends ReactContextBaseJavaModule {
   //      );
   //    });
   //  }
+
+  @ReactMethod
+  public void isExternalStorageManager(Promise promise) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      promise.resolve(Environment.isExternalStorageManager());
+    } else {
+      promise.resolve(true);
+    }
+  }
+
+  @ReactMethod
+  public void openExternalStorageManagerSettings() {
+    try {
+      Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+      intent.setData(Uri.parse("package:" + reactContext.getPackageName()));
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      reactContext.startActivity(intent);
+    } catch (Exception ignored) {}
+  }
 
   @ReactMethod
   public void getWindowSize(Promise promise) {

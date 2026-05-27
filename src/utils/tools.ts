@@ -3,7 +3,7 @@ import { Platform, ToastAndroid, BackHandler, Linking, Dimensions, Alert, Appear
 import Clipboard from '@react-native-clipboard/clipboard'
 import { storageDataPrefix } from '@/config/constant'
 import { gzipFile, readFile, temporaryDirectoryPath, unGzipFile, unlink, writeFile } from '@/utils/fs'
-import { getSystemLocales, isIgnoringBatteryOptimization, isNotificationsEnabled, requestNotificationPermission, requestIgnoreBatteryOptimization, shareText } from '@/utils/nativeModules/utils'
+import { getSystemLocales, isExternalStorageManager as _isExternalStorageManager, isIgnoringBatteryOptimization, isNotificationsEnabled, openExternalStorageManagerSettings, requestNotificationPermission, requestIgnoreBatteryOptimization, shareText } from '@/utils/nativeModules/utils'
 import musicSdk from '@/utils/musicSdk'
 import { getData, removeData, saveData } from '@/plugins/storage'
 import BackgroundTimer from 'react-native-background-timer'
@@ -68,33 +68,44 @@ export const requestStoragePermission = async() => {
         PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
         PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
       ],
-      // {
-      //   title: '存储读写权限申请',
-      //   message:
-      //     '洛雪音乐助手需要使用存储读写权限才能下载歌曲.',
-      //   buttonNeutral: '一会再问我',
-      //   buttonNegative: '取消',
-      //   buttonPositive: '确定',
-      // },
     )
-    // console.log(granted)
-    // console.log(Object.values(granted).every(r => r === PermissionsAndroid.RESULTS.GRANTED))
-    // console.log(PermissionsAndroid.RESULTS)
     const granteds = Object.values(granted)
     return granteds.every(r => r === PermissionsAndroid.RESULTS.GRANTED)
       ? true
       : granteds.includes(PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN)
         ? null
         : false
-    // if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-    //   console.log('You can use the storage')
-    // } else {
-    //   console.log('Storage permission denied')
-    // }
   } catch (err: any) {
-    // console.warn(err)
     return false
   }
+}
+
+export const checkFullStoragePermission = async(): Promise<boolean> => {
+  if (Platform.OS !== 'android') return true
+  if (Platform.Version < 30) return !!(await checkStoragePermissions())
+  return _isExternalStorageManager()
+}
+
+export const requestFullStoragePermission = async(): Promise<boolean | null> => {
+  if (Platform.OS !== 'android') return true
+  if (Platform.Version < 30) return requestStoragePermission()
+  const isGranted = await _isExternalStorageManager()
+  if (isGranted) return true
+  return new Promise<boolean | null>((resolve) => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return
+      subscription.remove()
+      setTimeout(async() => {
+        resolve(await _isExternalStorageManager())
+      }, 1000)
+    })
+    try {
+      openExternalStorageManagerSettings()
+    } catch {
+      subscription.remove()
+      resolve(null)
+    }
+  })
 }
 
 

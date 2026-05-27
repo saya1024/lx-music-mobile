@@ -1,10 +1,10 @@
 import { updateSetting } from '@/core/common'
 import { useI18n } from '@/lang'
-import { createStyle } from '@/utils/tools'
-import { memo } from 'react'
+import { createStyle, requestFullStoragePermission, checkFullStoragePermission } from '@/utils/tools'
+import { memo, useEffect, useState } from 'react'
 import { View, TouchableOpacity, TextInput } from 'react-native'
 import { useSettingValue } from '@/store/setting/hook'
-import { selectManagedFolder } from '@/utils/fs'
+import { getExternalStoragePaths } from '@/utils/fs'
 import Text from '@/components/common/Text'
 import { useTheme } from '@/store/theme/hook'
 
@@ -15,14 +15,24 @@ export default memo(() => {
   const setLocalMusicPath = (path: string) => {
     updateSetting({ 'common.localMusicPath': path })
   }
+  const [storageDirs, setStorageDirs] = useState<string[]>([])
+
+  useEffect(() => {
+    void getExternalStoragePaths().then(paths => {
+      setStorageDirs(paths.filter(Boolean))
+    })
+  }, [])
 
   const handleSelectFolder = async() => {
-    try {
-      const result = await selectManagedFolder(true)
-      if (result?.path) {
-        setLocalMusicPath(result.path)
-      }
-    } catch {}
+    const granted = await checkFullStoragePermission()
+    if (!granted) {
+      const result = await requestFullStoragePermission()
+      if (!result) return
+    }
+    if (!localMusicPath && storageDirs.length > 0) {
+      const defaultMusicPath = storageDirs[0] + '/Music'
+      setLocalMusicPath(defaultMusicPath)
+    }
   }
 
   const handleClear = () => {
@@ -41,7 +51,6 @@ export default memo(() => {
           placeholder={t('setting_basic_local_music_path_empty')}
           placeholderTextColor={theme['c-400']}
           onChangeText={setLocalMusicPath}
-          editable={false}
           multiline
         />
         <TouchableOpacity style={{ ...styles.btn, backgroundColor: theme['c-primary-alpha-100'] }} onPress={handleSelectFolder}>

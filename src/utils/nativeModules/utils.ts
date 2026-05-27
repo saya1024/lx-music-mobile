@@ -99,3 +99,7 @@ export const requestIgnoreBatteryOptimization = async() => new Promise<boolean>(
     resolve(false)
   })
 })
+
+export const isExternalStorageManager = UtilsModule.isExternalStorageManager as () => Promise<boolean>
+
+export const openExternalStorageManagerSettings = UtilsModule.openExternalStorageManagerSettings as () => void
